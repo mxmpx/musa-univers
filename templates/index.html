@@ -311,26 +311,38 @@
             }
         }
 
-        function parseDetails(text) {
+    function parseDetails(text) {
             if (!text) return null;
             const codeMatch = text.match(/Kod:\s*([^\.]+)/i);
             const subjectsMatch = text.match(/Imtihon fanlari:\s*([^\.]+)/i);
-            const grantMatch = text.match(/Grant:\s*([^,]+),\s*(\d+)\s*kvota/i);
-            const contractMatch = text.match(/Shartnoma:\s*([^,]+),\s*(\d+)\s*kvota/i);
+            
+            const grantMatch = text.match(/Grant:\s*(.*?),\s*(\d+)\s*kvota/i);
+            const contractMatch = text.match(/Shartnoma:\s*(.*?),\s*(\d+)\s*kvota/i);
 
             const lang = localStorage.getItem('lang') || 'uz';
             const missing = translations[lang].missingScore;
 
+            // Очищаем значение от дублирующегося слова "ball"
+            let grantScore = grantMatch ? grantMatch[1].replace(/ball/gi, '').trim() : missing;
+            if (!grantScore || grantScore === '0' || grantScore === '0.0' || grantScore.toLowerCase() === 'отсутствует') {
+                grantScore = missing;
+            }
+
+            let contractScore = contractMatch ? contractMatch[1].replace(/ball/gi, '').trim() : missing;
+            if (!contractScore || contractScore === '0' || contractScore === '0.0' || contractScore.toLowerCase() === 'отсутствует') {
+                contractScore = missing;
+            }
+
             return {
                 code: codeMatch ? codeMatch[1].trim() : '-',
                 subjects: subjectsMatch ? subjectsMatch[1].trim() : '-',
-                grantScore: grantMatch ? grantMatch[1].trim() : missing,
+                grantScore: grantScore,
                 grantQuota: grantMatch ? grantMatch[2] : '0',
-                contractScore: contractMatch ? contractMatch[1].trim() : missing,
+                contractScore: contractScore,
                 contractQuota: contractMatch ? contractMatch[2] : '0'
             };
         }
-
+        
         async function loadDetails(slug, title) {
             document.getElementById('uniTitle').innerText = title;
             const detailsArea = document.getElementById('detailsArea');
