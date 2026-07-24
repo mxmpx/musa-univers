@@ -1,49 +1,61 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="uz" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Университеты Узбекистана — Баллы и Направления</title>
+    <title>O'zbekiston Oliytexnika / Oliygohlar Ma'lumotnomasi</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background-color 0.3s, color 0.3s; }
         .card { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .list-group-item-action { cursor: pointer; transition: all 0.2s; }
-        .list-group-item-action:hover { background-color: #e9ecef; transform: translateX(3px); }
         .direction-card { transition: transform 0.2s; }
         .direction-card:hover { transform: translateY(-2px); }
     </style>
 </head>
 <body class="py-3 py-md-4">
     <div class="container px-2 px-md-4">
+        <!-- Настройки: Темы и Языки -->
+        <div class="d-flex justify-content-end align-items-center mb-3 gap-2">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="changeLang('uz')" id="btn-uz">O'zbek</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="changeLang('kaa')" id="btn-kaa">Qaraqalpaq</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="changeLang('ru')" id="btn-ru">Русский</button>
+            </div>
+            <button class="btn btn-outline-secondary btn-sm" onclick="toggleTheme()" id="themeToggleBtn">🌙</button>
+        </div>
+
         <header class="text-center mb-4 mb-md-5">
-            <h1 class="fw-bold text-primary fs-3 fs-md-1">🏛 Справочник ВУЗов Узбекистана</h1>
-            <p class="text-muted small fs-md-6">Выберите регион и тип университета, чтобы посмотреть направления и баллы</p>
+            <h1 class="fw-bold text-primary fs-3 fs-md-1" id="ui-header-title">🏛 O'zbekiston Oliygohlari Ma'lumotnomasi</h1>
+            <p class="text-muted small fs-md-6 mb-2" id="ui-header-subtitle">Viloyat va universitet turini tanlang, yo'nalishlar va ballarni ko'ring</p>
+            <div>
+                <a href="https://t.me/mxmpx" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-3 text-decoration-none" id="ui-creator-btn">Yaratuvchi: Musa</a>
+            </div>
         </header>
 
-        <!-- Фильтры -->
+        <!-- Главные фильтры ВУЗов -->
         <div class="card p-3 p-md-4 mb-4">
             <div class="row g-3">
                 <div class="col-md-5">
-                    <label class="form-label fw-semibold">Регион (Viloyat):</label>
+                    <label class="form-label fw-semibold" id="ui-label-region">Viloyat:</label>
                     <select id="regionSelect" class="form-select">
-                        <option value="all">Все регионы (Barcha viloyatlar)</option>
+                        <option value="all" id="ui-opt-all-regions">Barcha viloyatlar</option>
                         {% for r in regions %}
                         <option value="{{ r.val }}">{{ r.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-5">
-                    <label class="form-label fw-semibold">Тип учреждения:</label>
+                    <label class="form-label fw-semibold" id="ui-label-type">Muassasa turi:</label>
                     <select id="typeSelect" class="form-select">
-                        <option value="all">Все типы (Barcha turlar)</option>
+                        <option value="all" id="ui-opt-all-types">Barcha turlar</option>
                         {% for t in types %}
                         <option value="{{ t.val }}">{{ t.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
-                    <button onclick="applyFilter()" class="btn btn-primary w-100 fw-semibold">Показать</button>
+                    <button onclick="applyFilter()" class="btn btn-primary w-100 fw-semibold" id="ui-btn-show">Ko'rsatish</button>
                 </div>
             </div>
         </div>
@@ -52,23 +64,59 @@
             <!-- Список университетов -->
             <div class="col-lg-4 mb-4">
                 <div class="card p-3">
-                    <h5 class="fw-bold mb-3">🎓 Университеты</h5>
-                    <div id="uniList" class="list-group list-group-flush" style="max-height: 500px; overflow-y: auto;">
-                        <p class="text-muted">Нажмите "Показать", чтобы загрузить список.</p>
+                    <h5 class="fw-bold mb-3" id="ui-heading-unis">🎓 Oliygohlar</h5>
+                    <div id="uniList" class="list-group list-group-flush" style="max-height: 600px; overflow-y: auto;">
+                        <p class="text-muted" id="ui-prompt-unis">Ro'yxatni yuklash uchun "Ko'rsatish" tugmasini bosing.</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Список направлений (Карточки) -->
+            <!-- Список направлений и расширенные фильтры -->
             <div class="col-lg-8">
                 <div class="card p-3 p-md-4">
-                    <h5 id="uniTitle" class="fw-bold mb-3 text-dark border-bottom pb-2">📋 Выберите университет</h5>
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center border-bottom pb-3 mb-3 gap-2">
+                        <h5 id="uniTitle" class="fw-bold m-0">📋 Oliygohni tanlang</h5>
+                        <span id="counterBadge" class="badge bg-primary d-none">0 yo'nalish</span>
+                    </div>
+
+                    <!-- Фильтры внутри направлений -->
+                    <div id="subFilters" class="row g-2 mb-3 d-none">
+                        <div class="col-md-3 col-6">
+                            <select id="eduTypeFilter" class="form-select form-select-sm" onchange="filterDirections()">
+                                <option value="all" id="ui-opt-all-edu">Barcha shakllar</option>
+                                <option value="Kunduzgi">Kunduzgi</option>
+                                <option value="Kechki">Kechki</option>
+                                <option value="Sirtqi">Sirtqi</option>
+                                <option value="Masofaviy">Masofaviy</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <select id="langFilter" class="form-select form-select-sm" onchange="filterDirections()">
+                                <option value="all" id="ui-opt-all-lang">Barcha tillar</option>
+                                <option value="O'zbek">O'zbekcha</option>
+                                <option value="Rus">Русский</option>
+                                <option value="Qoraqalpoq">Qoraqalpoqcha</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <select id="fan1Filter" class="form-select form-select-sm" onchange="filterDirections()">
+                                <option value="all" id="ui-opt-fan1">1-fan: Barchasi</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <select id="fan2Filter" class="form-select form-select-sm" onchange="filterDirections()">
+                                <option value="all" id="ui-opt-fan2">2-fan: Barchasi</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div id="loading" class="text-center my-4 d-none">
                         <div class="spinner-border text-primary" role="status"></div>
-                        <p class="mt-2 text-muted">Загрузка данных...</p>
+                        <p class="mt-2 text-muted" id="ui-loading-text">Ma'lumotlar yuklanmoqda...</p>
                     </div>
+
                     <div id="detailsArea">
-                        <p class="text-muted">Выберите университет из списка слева для просмотра подробной информации.</p>
+                        <p class="text-muted" id="ui-select-uni-help">Batafsil ma'lumot ko'rish uchun chapdagi ro'yxatdan oliygohni tanlang.</p>
                     </div>
                 </div>
             </div>
@@ -76,10 +124,164 @@
     </div>
 
     <script>
+        let currentUniversityData = [];
+
+        // Словари переводов
+        const translations = {
+            uz: {
+                headerTitle: "🏛 O'zbekiston Oliygohlari Ma'lumotnomasi",
+                headerSubtitle: "Viloyat va universitet turini tanlang, yo'nalishlar va ballarni ko'ring",
+                creatorText: "Yaratuvchi: Musa",
+                labelRegion: "Viloyat:",
+                labelType: "Muassasa turi:",
+                btnShow: "Ko'rsatish",
+                headingUnis: "🎓 Oliygohlar",
+                promptUnis: "Ro'yxatni yuklash uchun \"Ko'rsatish\" tugmasini bosing.",
+                selectUniDefault: "📋 Oliygohni tanlang",
+                optAllRegions: "Barcha viloyatlar",
+                optAllTypes: "Barcha turlar",
+                optAllEdu: "Barcha shakllar",
+                optAllLang: "Barcha tillar",
+                optFan1: "1-fan: Barchasi",
+                optFan2: "2-fan: Barchasi",
+                loadingText: "Ma'lumotlar yuklanmoqda...",
+                selectUniHelp: "Batafsil ma'lumot ko'rish uchun chapdagi ro'yxatdan oliygohni tanlang.",
+                noDirsFound: "Bu oliygohda yo'nalishlar topilmadi.",
+                errorLoad: "Ma'lumotlarni yuklashda xatolik.",
+                grantText: "🌿 Grant",
+                contractText: "💼 Shartnoma",
+                missingScore: "Mavjud emas",
+                seatsUnit: "o'rin"
+            },
+            kaa: {
+                headerTitle: "🏛 Ózbekstan Joqarı Oqıw Orınları Ma'lumotnaması",
+                headerSubtitle: "Walayat hám universitet túrin tańlań, baǵdarları hám balların kóriń",
+                creatorText: "Jaratıwshı: Musa",
+                labelRegion: "Walayat:",
+                labelType: "Mákeme túri:",
+                btnShow: "Kórsetiw",
+                headingUnis: "🎓 Joqarı oqıw orınları",
+                promptUnis: "Dizimdi júklew ushın \"Kórsetiw\" túymesine basıń.",
+                selectUniDefault: "📋 Joqarı oqıw orının tańlań",
+                optAllRegions: "Barlıq walayatlar",
+                optAllTypes: "Barlıq túrler",
+                optAllEdu: "Barlıq formalar",
+                optAllLang: "Barlıq tiller",
+                optFan1: "1-pán: Barlıq",
+                optFan2: "2-pán: Barlıq",
+                loadingText: "Maǵlıwmatlar júklenip atır...",
+                selectUniHelp: "Tolıq maǵlıwmat kóriw ushın shep táreptegi dizimnen joqarı oqıw orının tańlań.",
+                noDirsFound: "Bul joqarı oqıw orınında baǵdarlar tabılmadı.",
+                errorLoad: "Maǵlıwmatlardı júklewde qátelik.",
+                grantText: "🌿 Grant",
+                contractText: "💼 Shartnama",
+                missingScore: "Joq",
+                seatsUnit: "orın"
+            },
+            ru: {
+                headerTitle: "🏛 Справочник ВУЗов Узбекистана",
+                headerSubtitle: "Выберите регион и тип университета, чтобы посмотреть направления и баллы",
+                creatorText: "Создатель: Musa",
+                labelRegion: "Регион (Viloyat):",
+                labelType: "Тип учреждения:",
+                btnShow: "Показать",
+                headingUnis: "🎓 Университеты",
+                promptUnis: "Нажмите \"Показать\", чтобы загрузить список.",
+                selectUniDefault: "📋 Выберите университет",
+                optAllRegions: "Все регионы (Barcha viloyatlar)",
+                optAllTypes: "Все типы (Barcha turlar)",
+                optAllEdu: "Все формы",
+                optAllLang: "Все языки",
+                optFan1: "1-й предмет: Все",
+                optFan2: "2-й предмет: Все",
+                loadingText: "Загрузка данных...",
+                selectUniHelp: "Выберите университет из списка слева для просмотра подробной информации.",
+                noDirsFound: "Информация о направлениях не найдена у этого ВУЗа.",
+                errorLoad: "Ошибка при загрузке данных.",
+                grantText: "🌿 Грант",
+                contractText: "💼 Контракт",
+                missingScore: "Отсутствует",
+                seatsUnit: "мест"
+            }
+        };
+
+        // Инициализация при загрузке (чтение из localStorage)
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            const savedLang = localStorage.getItem('lang') || 'uz';
+
+            setTheme(savedTheme, false);
+            changeLang(savedLang, false);
+            applyFilter();
+        });
+
+        // Управление темой
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme, true);
+        }
+
+        function setTheme(theme, save = true) {
+            document.documentElement.setAttribute('data-bs-theme', theme);
+            const btn = document.getElementById('themeToggleBtn');
+            btn.innerText = theme === 'dark' ? '☀️' : '🌙';
+            if (save) {
+                localStorage.setItem('theme', theme);
+            }
+        }
+
+        // Управление языком
+        function changeLang(lang, save = true) {
+            localStorage.setItem('lang', lang);
+
+            // Подсветка активной кнопки языка
+            ['uz', 'kaa', 'ru'].forEach(l => {
+                const b = document.getElementById(`btn-${l}`);
+                if (l === lang) {
+                    b.classList.remove('btn-outline-secondary');
+                    b.classList.add('btn-secondary');
+                } else {
+                    b.classList.remove('btn-secondary');
+                    b.classList.add('btn-outline-secondary');
+                }
+            });
+
+            // Применяем переводы
+            const t = translations[lang];
+            document.getElementById('ui-header-title').innerText = t.headerTitle;
+            document.getElementById('ui-header-subtitle').innerText = t.headerSubtitle;
+            document.getElementById('ui-creator-btn').innerText = t.creatorText;
+            document.getElementById('ui-label-region').innerText = t.labelRegion;
+            document.getElementById('ui-label-type').innerText = t.labelType;
+            document.getElementById('ui-btn-show').innerText = t.btnShow;
+            document.getElementById('ui-heading-unis').innerText = t.headingUnis;
+            
+            const uniList = document.getElementById('uniList');
+            if (uniList.children.length <= 1 && uniList.innerText.includes('...')) {
+                uniList.innerHTML = `<p class="text-muted">${t.promptUnis}</p>`;
+            }
+
+            document.getElementById('ui-opt-all-regions').innerText = t.optAllRegions;
+            document.getElementById('ui-opt-all-types').innerText = t.optAllTypes;
+            document.getElementById('ui-opt-all-edu').innerText = t.optAllEdu;
+            document.getElementById('ui-opt-all-lang').innerText = t.optAllLang;
+            document.getElementById('ui-opt-fan1').innerText = t.optFan1;
+            document.getElementById('ui-opt-fan2').innerText = t.optFan2;
+            document.getElementById('ui-loading-text').innerText = t.loadingText;
+            
+            const detailsArea = document.getElementById('detailsArea');
+            if (detailsArea.innerText.includes('choosing') || detailsArea.innerText.includes('tanlang') || detailsArea.innerText.includes('tańlań')) {
+                detailsArea.innerHTML = `<p class="text-muted">${t.selectUniHelp}</p>`;
+            }
+        }
+
         async function applyFilter() {
             const region = document.getElementById('regionSelect').value;
             const type = document.getElementById('typeSelect').value;
             const uniList = document.getElementById('uniList');
+            const lang = localStorage.getItem('lang') || 'uz';
+            const t = translations[lang];
 
             uniList.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div></div>';
 
@@ -92,7 +294,7 @@
                 const data = await res.json();
 
                 if (!data.universities.length) {
-                    uniList.innerHTML = '<p class="text-muted p-2">По вашим фильтрам ничего не найдено.</p>';
+                    uniList.innerHTML = `<p class="text-muted p-2">${t.noDirsFound}</p>`;
                     return;
                 }
 
@@ -105,7 +307,7 @@
                     uniList.appendChild(btn);
                 });
             } catch (e) {
-                uniList.innerHTML = '<p class="text-danger p-2">Ошибка при загрузке данных.</p>';
+                uniList.innerHTML = `<p class="text-danger p-2">${t.errorLoad}</p>`;
             }
         }
 
@@ -113,15 +315,18 @@
             if (!text) return null;
             const codeMatch = text.match(/Kod:\s*([^\.]+)/i);
             const subjectsMatch = text.match(/Imtihon fanlari:\s*([^\.]+)/i);
-            const grantMatch = text.match(/Grant:\s*([\d\.]+)\s*ball,\s*(\d+)\s*kvota/i);
-            const contractMatch = text.match(/Shartnoma:\s*([\d\.]+)\s*ball,\s*(\d+)\s*kvota/i);
+            const grantMatch = text.match(/Grant:\s*([^,]+),\s*(\d+)\s*kvota/i);
+            const contractMatch = text.match(/Shartnoma:\s*([^,]+),\s*(\d+)\s*kvota/i);
+
+            const lang = localStorage.getItem('lang') || 'uz';
+            const missing = translations[lang].missingScore;
 
             return {
                 code: codeMatch ? codeMatch[1].trim() : '-',
                 subjects: subjectsMatch ? subjectsMatch[1].trim() : '-',
-                grantScore: grantMatch ? grantMatch[1] : 'Нет',
+                grantScore: grantMatch ? grantMatch[1].trim() : missing,
                 grantQuota: grantMatch ? grantMatch[2] : '0',
-                contractScore: contractMatch ? contractMatch[1] : 'Нет',
+                contractScore: contractMatch ? contractMatch[1].trim() : missing,
                 contractQuota: contractMatch ? contractMatch[2] : '0'
             };
         }
@@ -130,9 +335,18 @@
             document.getElementById('uniTitle').innerText = title;
             const detailsArea = document.getElementById('detailsArea');
             const loading = document.getElementById('loading');
+            const subFilters = document.getElementById('subFilters');
+            const counterBadge = document.getElementById('counterBadge');
+            const lang = localStorage.getItem('lang') || 'uz';
+            const t = translations[lang];
 
             detailsArea.innerHTML = '';
+            subFilters.classList.add('d-none');
+            counterBadge.classList.add('d-none');
             loading.classList.remove('d-none');
+
+            document.getElementById('eduTypeFilter').value = 'all';
+            document.getElementById('langFilter').value = 'all';
 
             try {
                 const res = await fetch(`/api/details/${slug}`);
@@ -141,52 +355,150 @@
                 loading.classList.add('d-none');
 
                 if (!data.items || !data.items.length) {
-                    detailsArea.innerHTML = '<div class="alert alert-warning">Информация о направлениях не найдена у этого ВУЗа.</div>';
+                    detailsArea.innerHTML = `<div class="alert alert-warning">${t.noDirsFound}</div>`;
                     return;
                 }
 
-                let html = '<div class="d-flex flex-column gap-3">';
+                currentUniversityData = data.items;
+                populateFanFilters(currentUniversityData);
 
-                data.items.forEach(item => {
-                    const p = parseDetails(item.desc);
+                subFilters.classList.remove('d-none');
+                counterBadge.classList.remove('d-none');
 
-                    html += `
-                        <div class="card border p-3 direction-card bg-white shadow-sm">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="badge bg-secondary font-monospace">${p.code}</span>
-                                <span class="text-muted small">🎯 ${p.subjects}</span>
-                            </div>
-                            <h6 class="fw-bold text-dark mb-3">${item.name}</h6>
-                            <div class="row g-2 text-center">
-                                <div class="col-6">
-                                    <div class="p-2 bg-light rounded border border-success border-opacity-25">
-                                        <div class="text-success small fw-semibold mb-1">🌿 Грант</div>
-                                        <div class="fw-bold text-dark">${p.grantScore} балл</div>
-                                        <div class="text-muted" style="font-size: 0.75rem;">👤 ${p.grantQuota} мест</div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="p-2 bg-light rounded border border-info border-opacity-25">
-                                        <div class="text-info-emphasis small fw-semibold mb-1">💼 Контракт</div>
-                                        <div class="fw-bold text-dark">${p.contractScore} балл</div>
-                                        <div class="text-muted" style="font-size: 0.75rem;">👤 ${p.contractQuota} мест</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                html += '</div>';
-                detailsArea.innerHTML = html;
+                renderDirections(currentUniversityData);
 
             } catch (e) {
                 loading.classList.add('d-none');
-                detailsArea.innerHTML = '<div class="alert alert-danger">Ошибка получения данных о ВУЗе.</div>';
+                detailsArea.innerHTML = `<div class="alert alert-danger">${t.errorLoad}</div>`;
+                console.error(e);
             }
         }
 
-        window.onload = applyFilter;
+        function populateFanFilters(items) {
+            const fan1Set = new Set();
+            const fan2Set = new Set();
+            const lang = localStorage.getItem('lang') || 'uz';
+            const t = translations[lang];
+
+            items.forEach(item => {
+                if (item.fan1) fan1Set.add(item.fan1);
+                if (item.fan2) fan2Set.add(item.fan2);
+            });
+
+            const fan1Select = document.getElementById('fan1Filter');
+            const fan2Select = document.getElementById('fan2Filter');
+
+            fan1Select.innerHTML = `<option value="all">${t.optFan1}</option>`;
+            fan2Select.innerHTML = `<option value="all">${t.optFan2}</option>`;
+
+            fan1Set.forEach(fan => {
+                const opt = document.createElement('option');
+                opt.value = fan;
+                opt.innerText = fan;
+                fan1Select.appendChild(opt);
+            });
+
+            fan2Set.forEach(fan => {
+                const opt = document.createElement('option');
+                opt.value = fan;
+                opt.innerText = fan;
+                fan2Select.appendChild(opt);
+            });
+        }
+
+        function renderDirections(items) {
+            const detailsArea = document.getElementById('detailsArea');
+            const counterBadge = document.getElementById('counterBadge');
+            const lang = localStorage.getItem('lang') || 'uz';
+            const t = translations[lang];
+            
+            counterBadge.innerText = `${items.length} ${lang === 'ru' ? 'направлений' : 'yo\'nalish'}`;
+
+            if (!items.length) {
+                detailsArea.innerHTML = `<div class="alert alert-info text-center">${t.noDirsFound}</div>`;
+                return;
+            }
+
+            let html = '<div class="d-flex flex-column gap-3" style="max-height: 600px; overflow-y: auto; padding-right: 4px;">';
+
+            items.forEach(item => {
+                const p = parseDetails(item.desc);
+
+                const grantText = p.grantScore === t.missingScore ? t.missingScore : `${p.grantScore} ball`;
+                const contractText = p.contractScore === t.missingScore ? t.missingScore : `${p.contractScore} ball`;
+
+                html += `
+                    <div class="card border p-3 direction-card shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-secondary font-monospace">${p.code}</span>
+                            <span class="text-muted small">🎯 ${p.subjects}</span>
+                        </div>
+                        <h6 class="fw-bold mb-3">${item.name}</h6>
+                        <div class="row g-2 text-center">
+                            <div class="col-6">
+                                <div class="p-2 bg-body-secondary rounded border border-success border-opacity-25">
+                                    <div class="text-success small fw-semibold mb-1">${t.grantText}</div>
+                                    <div class="fw-bold">${grantText}</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">👤 ${p.grantQuota} ${t.seatsUnit}</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 bg-body-secondary rounded border border-info border-opacity-25">
+                                    <div class="text-info small fw-semibold mb-1">${t.contractText}</div>
+                                    <div class="fw-bold">${contractText}</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">👤 ${p.contractQuota} ${t.seatsUnit}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            detailsArea.innerHTML = html;
+        }
+
+        function filterDirections() {
+            const eduType = document.getElementById('eduTypeFilter').value;
+            const lang = document.getElementById('langFilter').value;
+            const fan1 = document.getElementById('fan1Filter').value;
+            const fan2 = document.getElementById('fan2Filter').value;
+
+            const filtered = currentUniversityData.filter(item => {
+                const fullText = (item.name + ' ' + (item.desc || '')).toLowerCase();
+                
+                let matchEdu = true;
+                if (eduType !== 'all') {
+                    matchEdu = fullText.includes(eduType.toLowerCase());
+                }
+
+                let matchLang = true;
+                if (lang !== 'all') {
+                    matchLang = fullTestLanguageCheck(fullText, lang);
+                }
+
+                let matchFan1 = true;
+                if (fan1 !== 'all') {
+                    matchFan1 = item.fan1 === fan1;
+                }
+
+                let matchFan2 = true;
+                if (fan2 !== 'all') {
+                    matchFan2 = item.fan2 === fan2;
+                }
+
+                return matchEdu && matchLang && matchFan1 && matchFan2;
+            });
+
+            renderDirections(filtered);
+        }
+
+        function fullTestLanguageCheck(text, lang) {
+            if (lang === "O'zbek") return text.includes("o'zbek") || text.includes("uzbek");
+            if (lang === "Rus") return text.includes("rus") || text.includes("russkiy");
+            if (lang === "Qoraqalpoq") return text.includes("qoraqalpoq") || text.includes("qaraqalpaq");
+            return true;
+        }
     </script>
 </body>
 </html>
