@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Университеты Узбекистана — Баллы и Направления</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .list-group-item-action { cursor: pointer; transition: all 0.2s; }
+        .list-group-item-action:hover { background-color: #e9ecef; transform: translateX(3px); }
+        .direction-card { transition: transform 0.2s; }
+        .direction-card:hover { transform: translateY(-2px); }
+    </style>
+</head>
+<body class="py-3 py-md-4">
+    <div class="container px-2 px-md-4">
+        <header class="text-center mb-4 mb-md-5">
+            <h1 class="fw-bold text-primary fs-3 fs-md-1">🏛 Справочник ВУЗов Узбекистана</h1>
+            <p class="text-muted small fs-md-6">Выберите регион и тип университета, чтобы посмотреть направления и баллы</p>
+        </header>
+
+        <!-- Фильтры -->
+        <div class="card p-3 p-md-4 mb-4">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label fw-semibold">Регион (Viloyat):</label>
+                    <select id="regionSelect" class="form-select">
+                        <option value="all">Все регионы (Barcha viloyatlar)</option>
+                        {% for r in regions %}
+                        <option value="{{ r.val }}">{{ r.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label fw-semibold">Тип учреждения:</label>
+                    <select id="typeSelect" class="form-select">
+                        <option value="all">Все типы (Barcha turlar)</option>
+                        {% for t in types %}
+                        <option value="{{ t.val }}">{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button onclick="applyFilter()" class="btn btn-primary w-100 fw-semibold">Показать</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Список университетов -->
+            <div class="col-lg-4 mb-4">
+                <div class="card p-3">
+                    <h5 class="fw-bold mb-3">🎓 Университеты</h5>
+                    <div id="uniList" class="list-group list-group-flush" style="max-height: 500px; overflow-y: auto;">
+                        <p class="text-muted">Нажмите "Показать", чтобы загрузить список.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Список направлений (Карточки) -->
+            <div class="col-lg-8">
+                <div class="card p-3 p-md-4">
+                    <h5 id="uniTitle" class="fw-bold mb-3 text-dark border-bottom pb-2">📋 Выберите университет</h5>
+                    <div id="loading" class="text-center my-4 d-none">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2 text-muted">Загрузка данных...</p>
+                    </div>
+                    <div id="detailsArea">
+                        <p class="text-muted">Выберите университет из списка слева для просмотра подробной информации.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function applyFilter() {
+            const region = document.getElementById('regionSelect').value;
+            const type = document.getElementById('typeSelect').value;
+            const uniList = document.getElementById('uniList');
+
+            uniList.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div></div>';
+
+            try {
+                const res = await fetch('/api/filter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ region, type })
+                });
+                const data = await res.json();
+
+                if (!data.universities.length) {
+                    uniList.innerHTML = '<p class="text-muted p-2">По вашим фильтрам ничего не найдено.</p>';
+                    return;
+                }
+
+                uniList.innerHTML = '';
+                data.universities.forEach(uni => {
+                    const btn = document.createElement('button');
+                    btn.className = 'list-group-item list-group-item-action text-start py-2';
+                    btn.innerText = uni.title;
+                    btn.onclick = () => loadDetails(uni.slug, uni.title);
+                    uniList.appendChild(btn);
+                });
+            } catch (e) {
+                uniList.innerHTML = '<p class="text-danger p-2">Ошибка при загрузке данных.</p>';
+            }
+        }
+
+        function parseDetails(text) {
+            if (!text) return null;
+            const codeMatch = text.match(/Kod:\s*([^\.]+)/i);
+            const subjectsMatch = text.match(/Imtihon fanlari:\s*([^\.]+)/i);
+            const grantMatch = text.match(/Grant:\s*([\d\.]+)\s*ball,\s*(\d+)\s*kvota/i);
+            const contractMatch = text.match(/Shartnoma:\s*([\d\.]+)\s*ball,\s*(\d+)\s*kvota/i);
+
+            return {
+                code: codeMatch ? codeMatch[1].trim() : '-',
+                subjects: subjectsMatch ? subjectsMatch[1].trim() : '-',
+                grantScore: grantMatch ? grantMatch[1] : 'Нет',
+                grantQuota: grantMatch ? grantMatch[2] : '0',
+                contractScore: contractMatch ? contractMatch[1] : 'Нет',
+                contractQuota: contractMatch ? contractMatch[2] : '0'
+            };
+        }
+
+        async function loadDetails(slug, title) {
+            document.getElementById('uniTitle').innerText = title;
+            const detailsArea = document.getElementById('detailsArea');
+            const loading = document.getElementById('loading');
+
+            detailsArea.innerHTML = '';
+            loading.classList.remove('d-none');
+
+            try {
+                const res = await fetch(`/api/details/${slug}`);
+                const data = await res.json();
+
+                loading.classList.add('d-none');
+
+                if (!data.items || !data.items.length) {
+                    detailsArea.innerHTML = '<div class="alert alert-warning">Информация о направлениях не найдена у этого ВУЗа.</div>';
+                    return;
+                }
+
+                let html = '<div class="d-flex flex-column gap-3">';
+
+                data.items.forEach(item => {
+                    const p = parseDetails(item.desc);
+
+                    html += `
+                        <div class="card border p-3 direction-card bg-white shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-secondary font-monospace">${p.code}</span>
+                                <span class="text-muted small">🎯 ${p.subjects}</span>
+                            </div>
+                            <h6 class="fw-bold text-dark mb-3">${item.name}</h6>
+                            <div class="row g-2 text-center">
+                                <div class="col-6">
+                                    <div class="p-2 bg-light rounded border border-success border-opacity-25">
+                                        <div class="text-success small fw-semibold mb-1">🌿 Грант</div>
+                                        <div class="fw-bold text-dark">${p.grantScore} балл</div>
+                                        <div class="text-muted" style="font-size: 0.75rem;">👤 ${p.grantQuota} мест</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 bg-light rounded border border-info border-opacity-25">
+                                        <div class="text-info-emphasis small fw-semibold mb-1">💼 Контракт</div>
+                                        <div class="fw-bold text-dark">${p.contractScore} балл</div>
+                                        <div class="text-muted" style="font-size: 0.75rem;">👤 ${p.contractQuota} мест</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                detailsArea.innerHTML = html;
+
+            } catch (e) {
+                loading.classList.add('d-none');
+                detailsArea.innerHTML = '<div class="alert alert-danger">Ошибка получения данных о ВУЗе.</div>';
+            }
+        }
+
+        window.onload = applyFilter;
+    </script>
+</body>
+</html>
