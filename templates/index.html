@@ -504,11 +504,20 @@
 
             renderDirections(filtered);
         }
-
-        function fullTestLanguageCheck(text, lang) {
-            if (lang === "O'zbek") return text.includes("o'zbek") || text.includes("uzbek");
-            if (lang === "Rus") return text.includes("rus") || text.includes("russkiy");
-            if (lang === "Qoraqalpoq") return text.includes("qoraqalpoq") || text.includes("qaraqalpaq");
+        
+    function fullTestLanguageCheck(text, lang) {
+            // Нормализуем все виды апострофов к стандартному для надежного поиска
+            const normalized = text.toLowerCase().replace(/[‘'`ʼ]/g, "'");
+            
+            if (lang === "O'zbek") {
+                return normalized.includes("o'zbek") || normalized.includes("uzbek") || normalized.includes("o`zbek");
+            }
+            if (lang === "Rus") {
+                return normalized.includes("rus") || normalized.includes("russkiy") || normalized.includes("русск");
+            }
+            if (lang === "Qoraqalpoq") {
+                return normalized.includes("qoraqalpoq") || normalized.includes("qaraqalpaq");
+            }
             return true;
         }
     </script>
